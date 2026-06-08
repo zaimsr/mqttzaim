@@ -160,11 +160,45 @@ function broadcastState() {
 
 // MQTT Clients configuration
 let mqttClients: (mqtt.MqttClient | null)[] = [null, null, null];
+let areMqttConnectionsActive = false;
 
 function initMqttConnections() {
+  if (process.env.NODE_ENV !== "production" && sseClients.length === 0) {
+    console.log("[DEV] Menunda koneksi MQTT karena tidak ada client aktif di preview.");
+    return;
+  }
+
+  if (areMqttConnectionsActive) {
+    appConfig.brokers.forEach((cfg, index) => {
+      if (!mqttClients[index]) {
+        connectToBroker(index, cfg);
+      }
+    });
+    return;
+  }
+
+  areMqttConnectionsActive = true;
   appConfig.brokers.forEach((cfg, index) => {
     connectToBroker(index, cfg);
   });
+}
+
+function disconnectAllMqttConnections() {
+  if (!areMqttConnectionsActive) return;
+  areMqttConnectionsActive = false;
+
+  mqttClients.forEach((client, index) => {
+    if (client) {
+      try {
+        client.end(true);
+        addLog("info", `Broker ${index + 1}`, "Koneksi dipause secara otomatis karena tidak ada client aktif di preview.");
+      } catch (e) {
+        console.error(`Gagal menutup koneksi Broker ${index + 1}`, e);
+      }
+      mqttClients[index] = null;
+    }
+  });
+  broadcastState();
 }
 
 function connectToBroker(index: number, cfg: typeof DEFAULT_BROKERS[0]) {
@@ -377,8 +411,21 @@ app.get("/api/stream", (req, res) => {
   };
   res.write(`data: ${JSON.stringify(statePayload)}\n\n`);
 
+  // Activate connection when a client connects in dev env
+  if (process.env.NODE_ENV !== "production") {
+    initMqttConnections();
+  }
+
   req.on("close", () => {
     sseClients = sseClients.filter(client => client !== res);
+
+    if (process.env.NODE_ENV !== "production" && sseClients.length === 0) {
+      setTimeout(() => {
+        if (sseClients.length === 0) {
+          disconnectAllMqttConnections();
+        }
+      }, 5000); // 5s grace period
+    }
   });
 });
 
@@ -577,8 +624,12 @@ app.post("/api/gemini/parse-voice", async (req, res) => {
 });
 
 
-// Start MQTT Connections on boot up
-initMqttConnections();
+// Start MQTT Connections on boot up (Always active on production/Railway, deferred on dev)
+if (process.env.NODE_ENV === "production") {
+  initMqttConnections();
+} else {
+  console.log("[DEV] Server booted. MQTT connection will activate only when a web client views the preview.");
+}
 
 
 // Integration with Vite
