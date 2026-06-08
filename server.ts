@@ -232,9 +232,10 @@ function connectToBroker(index: number, cfg: typeof DEFAULT_BROKERS[0]) {
   const options: mqtt.IClientOptions = {
     clientId: cfg.client_id || `WebProxy_${Math.random().toString(36).substring(2, 8)}`,
     rejectUnauthorized: false, // Mirror ESP32 espClient.setInsecure()
-    keepalive: 60,
-    reconnectPeriod: 10005, // retry every 10s
-    connectTimeout: 15000,
+    keepalive: 15, // Solusi: keepalive rendah (15 dtk) mencegah timeout koneksi idle oleh Railway/Cedalo/Ably
+    reconnectPeriod: 2000, // Solusi: reconnect cepat (2 dtk) ketimbang 10 dtk
+    connectTimeout: 10000, // Fail fast agar cepat retry
+    clean: true,
   };
 
   if (connectionUsername && connectionUsername.trim().length > 0) {
@@ -339,15 +340,24 @@ function handleIncomingMqttMessage(brokerIdx: number, topic: string, payload: st
 function publishMessage(topic: string, message: string) {
   let matchedPublishCount = 0;
   mqttClients.forEach((client, idx) => {
-    if (client && client.connected) {
-      client.publish(topic, message, { qos: 1 });
-      addLog("mqtt_tx", `Broker ${idx + 1}`, `Kirim [${topic}] => ${message}`, topic, message);
+    if (client) {
       matchedPublishCount++;
+      if (!client.connected) {
+        addLog("info", `Broker ${idx + 1}`, `Memicu hubung ulang paksa untuk pengiriman instan...`);
+        try {
+          client.reconnect();
+        } catch (e) {
+          console.error("Gagal reconnect paksa:", e);
+        }
+      }
+      client.publish(topic, message, { qos: 1 });
+      const statusText = client.connected ? "Terkirim" : "Diantrekan & Menunggu";
+      addLog("mqtt_tx", `Broker ${idx + 1}`, `Kirim [${topic}] => ${message} (${statusText})`, topic, message);
     }
   });
 
   if (matchedPublishCount === 0) {
-    addLog("warning", "Sistem", `Mencoba kirim [${topic}:${message}] tapi tidak ada broker terhubung!`);
+    addLog("warning", "Sistem", `Mencoba kirim [${topic}:${message}] tapi tidak ada client broker terinisialisasi!`);
   }
 }
 
