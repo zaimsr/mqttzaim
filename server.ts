@@ -190,8 +190,8 @@ function connectToBroker(index: number, cfg: typeof DEFAULT_BROKERS[0]) {
   const url = `${protocol}://${cfg.server}:${cfg.port}`;
 
   let connectionUsername = cfg.user;
-  // If vhost is present, prepend vhost:username (only for RabbitMQ clusters, NOT for LavinMQ clusters which contain .lmq. in server)
-  if (cfg.vhost && cfg.vhost.trim().length > 0 && !cfg.server.includes(".lmq.")) {
+  // If vhost is present, prepend vhost:username
+  if (cfg.vhost && cfg.vhost.trim().length > 0) {
     connectionUsername = `${cfg.vhost}:${cfg.user}`;
   }
 
@@ -448,6 +448,7 @@ app.post("/api/switch-broker", (req, res) => {
 
   // ESP32 subscribes to kontrol/broker and listens for "1", "2", "3" (1-based index)
   const espPayload = String(index + 1);
+  activeBrokerIndexESP32 = index; // Update local state so UI is immediately in-sync and does not snap back!
   publishMessage("kontrol/broker", espPayload);
   addLog("info", "Sistem", `Mengirim perintah perpindahan broker ke ESP32 ke Broker ${index + 1}`);
   res.json({ success: true, activeBrokerIndexESP32: index });
