@@ -23,19 +23,19 @@ const ai = new GoogleGenAI({
 // Default configurations
 const DEFAULT_BROKERS = [
   {
-    server: "kingfisher.lmq.cloudamqp.com",
+    server: "mqtt.flespi.io",
     port: 8883,
-    user: "harvltis",
-    pass: "jfOuozBlP2LGYTdWBByxJyFrpbAtO_56",
-    client_id: "AMQPEsp",
-    vhost: "harvltis"
+    user: "FlespiToken <MASUKKAN_TOKEN_FLESPI_ANDA_DI_SINI>",
+    pass: "",
+    client_id: "webclient",
+    vhost: ""
   },
   {
     server: "mqtt.ably.io",
     port: 8883,
     user: "DiFTpw.Mpn-vg",
     pass: "ZIVYTCFuApMnENUYZcUmw83JUx3KJiClrsIwm3b3oH0",
-    client_id: "AblyEsp",
+    client_id: "webclient",
     vhost: ""
   },
   {
@@ -201,6 +201,10 @@ function disconnectAllMqttConnections() {
   broadcastState();
 }
 
+// Standard keepalive (PINGREQ) dari protokol MQTT (dikonfigurasi keepalive: 10 detik di bawah)
+// sudah sepenuhnya cukup untuk menjaga soket TCP tetap hidup di CloudAMQP/Ably/Cedalo,
+// tanpa memicu pelanggaran ACL (izin topik) atau konflik siklus reconnect otomatis mqtt.js.
+
 function connectToBroker(index: number, cfg: typeof DEFAULT_BROKERS[0]) {
   // End existing connection if any
   if (mqttClients[index]) {
@@ -224,18 +228,27 @@ function connectToBroker(index: number, cfg: typeof DEFAULT_BROKERS[0]) {
   const url = `${protocol}://${cfg.server}:${cfg.port}`;
 
   let connectionUsername = cfg.user;
+  // Auto-prepend "FlespiToken " for Flespi broker if not already present
+  if (cfg.server && cfg.server.toLowerCase().includes("flespi") && connectionUsername && !connectionUsername.startsWith("FlespiToken ")) {
+    connectionUsername = `FlespiToken ${connectionUsername.trim()}`;
+  }
   // If vhost is present, prepend vhost:username
   if (cfg.vhost && cfg.vhost.trim().length > 0) {
-    connectionUsername = `${cfg.vhost}:${cfg.user}`;
+    connectionUsername = `${cfg.vhost}:${connectionUsername}`;
   }
 
   const options: mqtt.IClientOptions = {
-    clientId: cfg.client_id || `WebProxy_${Math.random().toString(36).substring(2, 8)}`,
+    // Menggunakan client_id asli murni secara langsung dari konfigurasi tanpa suffix apa pun
+    clientId: cfg.client_id || "webclient",
     rejectUnauthorized: false, // Mirror ESP32 espClient.setInsecure()
-    keepalive: 15, // Solusi: keepalive rendah (15 dtk) mencegah timeout koneksi idle oleh Railway/Cedalo/Ably
-    reconnectPeriod: 2000, // Solusi: reconnect cepat (2 dtk) ketimbang 10 dtk
-    connectTimeout: 10000, // Fail fast agar cepat retry
+    // Menggunakan keepalive rendah (10 detik) bawaan protokol MQTT secara efisien untuk menjaga
+    // koneksi TCP tetap hidup melewati proxy/NAT CloudAMQP tanpa perlu publish manual
+    keepalive: 10,
+    reconnectPeriod: 3000, // Kecepatan pengecekan hubungan kembali otomatis standar
+    connectTimeout: 15000, // Batas waktu koneksi untuk mencoba aktif kembali cepat
     clean: true,
+    resubscribe: true, // Berlangganan kembali otomatis ke semua topik setelah putus-sambung
+    protocolVersion: 4, // Enforce standar protokol MQTT 3.1.1
   };
 
   if (connectionUsername && connectionUsername.trim().length > 0) {
@@ -342,14 +355,6 @@ function publishMessage(topic: string, message: string) {
   mqttClients.forEach((client, idx) => {
     if (client) {
       matchedPublishCount++;
-      if (!client.connected) {
-        addLog("info", `Broker ${idx + 1}`, `Memicu hubung ulang paksa untuk pengiriman instan...`);
-        try {
-          client.reconnect();
-        } catch (e) {
-          console.error("Gagal reconnect paksa:", e);
-        }
-      }
       client.publish(topic, message, { qos: 1 });
       const statusText = client.connected ? "Terkirim" : "Diantrekan & Menunggu";
       addLog("mqtt_tx", `Broker ${idx + 1}`, `Kirim [${topic}] => ${message} (${statusText})`, topic, message);
@@ -524,7 +529,7 @@ app.post("/api/config", (req, res) => {
           port: Number(b.port) || 8883,
           user: b.user || "",
           pass: b.pass || "",
-          client_id: b.client_id || `WebProxy_${idx}`,
+          client_id: b.client_id || "webclient",
           vhost: b.vhost || ""
         };
       }

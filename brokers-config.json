@@ -1,19 +1,19 @@
 {
   "brokers": [
     {
-      "server": "kingfisher.lmq.cloudamqp.com",
+      "server": "mqtt.flespi.io",
       "port": 8883,
-      "user": "harvltis",
-      "pass": "jfOuozBlP2LGYTdWBByxJyFrpbAtO_56",
-      "client_id": "AMQPEsp",
-      "vhost": "harvltis"
+      "user": "FlespiToken <MASUKKAN_TOKEN_FLESPI_ANDA_DI_SINI>",
+      "pass": "",
+      "client_id": "webclient",
+      "vhost": ""
     },
     {
       "server": "mqtt.ably.io",
       "port": 8883,
       "user": "DiFTpw.Mpn-vg",
       "pass": "ZIVYTCFuApMnENUYZcUmw83JUx3KJiClrsIwm3b3oH0",
-      "client_id": "AblyEsp",
+      "client_id": "webclient",
       "vhost": ""
     },
     {
