@@ -25,7 +25,7 @@ const DEFAULT_BROKERS = [
   {
     server: "mqtt.flespi.io",
     port: 8883,
-    user: "FlespiToken <MASUKKAN_TOKEN_FLESPI_ANDA_DI_SINI>",
+    user: "JNakg4rF3CQhdi1wSLYqtNG4PtQNVovyihegxzwsahdrm19MboIjIMaGc9nG8gRO",
     pass: "",
     client_id: "webclient",
     vhost: ""
@@ -162,13 +162,13 @@ function broadcastState() {
 let mqttClients: (mqtt.MqttClient | null)[] = [null, null, null];
 let areMqttConnectionsActive = false;
 
-function initMqttConnections() {
+function initMqttConnections(force = false) {
   if (process.env.NODE_ENV !== "production" && sseClients.length === 0) {
     console.log("[DEV] Menunda koneksi MQTT karena tidak ada client aktif di preview.");
     return;
   }
 
-  if (areMqttConnectionsActive) {
+  if (areMqttConnectionsActive && !force) {
     appConfig.brokers.forEach((cfg, index) => {
       if (!mqttClients[index]) {
         connectToBroker(index, cfg);
@@ -550,7 +550,7 @@ app.post("/api/config", (req, res) => {
     addLog("success", "Sistem", "Konfigurasi berhasil disimpan dan disimpan!");
     
     // Reinitialize only the modified connections
-    initMqttConnections();
+    initMqttConnections(true);
     res.json({ success: true, config: appConfig });
   } catch (err: any) {
     addLog("error", "Sistem", `Gagal menyimpan konfigurasi: ${err.message}`);
