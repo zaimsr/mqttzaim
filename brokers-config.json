@@ -1,0 +1,34 @@
+{
+  "brokers": [
+    {
+      "server": "kingfisher.lmq.cloudamqp.com",
+      "port": 8883,
+      "user": "harvltis",
+      "pass": "jfOuozBlP2LGYTdWBByxJyFrpbAtO_56",
+      "client_id": "AMQPEsp",
+      "vhost": "harvltis"
+    },
+    {
+      "server": "mqtt.ably.io",
+      "port": 8883,
+      "user": "DiFTpw.Mpn-vg",
+      "pass": "ZIVYTCFuApMnENUYZcUmw83JUx3KJiClrsIwm3b3oH0",
+      "client_id": "AblyEsp",
+      "vhost": ""
+    },
+    {
+      "server": "pf-z3fj9bwmozmxa93e6k1e.cedalo.cloud",
+      "port": 8883,
+      "user": "web2",
+      "pass": "a",
+      "client_id": "webclient2",
+      "vhost": ""
+    }
+  ],
+  "relayLabels": [
+    "Relay 1 (Kipas)",
+    "Relay 2 (Lampu)",
+    "Relay 3 (Water Pump)",
+    "Relay 4 (Sistem Utama)"
+  ]
+}

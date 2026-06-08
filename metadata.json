@@ -1,0 +1,6 @@
+{
+  "name": "ESP32 MQTT Relay Controller",
+  "description": "Web interface to control, monitor and configure 3 dynamic MQTT brokers, 4 load-switching relays, and real-time DHT11 status.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
