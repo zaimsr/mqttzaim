@@ -36,28 +36,87 @@ export default function App() {
   const [localTime, setLocalTime] = useState('');
   const [mutationLoading, setMutationLoading] = useState<string | null>(null);
 
-  // Sync state over Server-Sent Events (SSE)
-  useEffect(() => {
-    const eventSource = new EventSource('/api/stream');
-
-    eventSource.onmessage = (event) => {
-      try {
-        const parsed = JSON.parse(event.data);
+  // Core helper to fetch state via REST API
+  const fetchState = async () => {
+    try {
+      const res = await fetch('/api/state');
+      if (res.ok) {
+        const parsed = await res.json();
         setState((prev) => ({
           ...prev,
           ...parsed
         }));
-      } catch (err) {
-        console.error('SSE JSON parsing error:', err);
+      }
+    } catch (err) {
+      console.error('Gagal mengambil status via REST:', err);
+    }
+  };
+
+  // Sync state over Server-Sent Events (SSE) with robust REST fallback
+  useEffect(() => {
+    // 1. Fetch immediately on component mount
+    fetchState();
+
+    let eventSource: EventSource | null = null;
+    let pollInterval: any = null;
+    let lastMessageReceivedAt = Date.now();
+
+    const startPollingFallback = () => {
+      if (!pollInterval) {
+        console.log('Mengaktifkan REST Polling otomatis...');
+        pollInterval = setInterval(fetchState, 3000);
       }
     };
 
-    eventSource.onerror = (err) => {
-      console.warn('SSE disconnected, falling back to REST polling', err);
+    const initEventSource = () => {
+      try {
+        eventSource = new EventSource('/api/stream');
+
+        eventSource.onmessage = (event) => {
+          lastMessageReceivedAt = Date.now();
+          try {
+            const parsed = JSON.parse(event.data);
+            setState((prev) => ({
+              ...prev,
+              ...parsed
+            }));
+          } catch (err) {
+            console.error('SSE JSON parsing error:', err);
+          }
+        };
+
+        eventSource.onerror = (err) => {
+          console.warn('Koneksi stream SSE terputus, fallback ke REST Polling...', err);
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          startPollingFallback();
+        };
+      } catch (e) {
+        console.error('Gagal inisialisasi SSE:', e);
+        startPollingFallback();
+      }
     };
 
+    initEventSource();
+
+    // Watchdog timer: If we don't receive any SSE messages for 6 seconds, we active background REST polling
+    // This is vital on Railway / proxy environments that silently buffer or drop SSE events.
+    const watchdog = setInterval(() => {
+      if (Date.now() - lastMessageReceivedAt > 6000) {
+        startPollingFallback();
+      }
+    }, 3000);
+
     return () => {
-      eventSource.close();
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+      clearInterval(watchdog);
     };
   }, []);
 

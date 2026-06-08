@@ -38,6 +38,32 @@ export default function BrokerConfigForm({ initialBrokers, initialLabels, onSave
   const [saving, setSaving] = useState(false);
   const [savedStatus, setSavedStatus] = useState<'idle' | 'success' | 'fail'>('idle');
 
+  // Sync state if parents props change or finish loading
+  const [isInitialized, setIsInitialized] = useState(false);
+  React.useEffect(() => {
+    if (initialBrokers && initialBrokers.length > 0 && !isInitialized) {
+      const hasRealData = initialBrokers.some(b => b.server);
+      if (hasRealData) {
+        const list = [...initialBrokers];
+        while (list.length < 3) {
+          list.push({ server: '', port: 8883, user: '', pass: '', client_id: '', vhost: '' });
+        }
+        setBrokers(list);
+        setIsInitialized(true);
+      }
+    }
+  }, [initialBrokers, isInitialized]);
+
+  React.useEffect(() => {
+    if (initialLabels && initialLabels.length > 0) {
+      const arr = [...initialLabels];
+      while (arr.length < 4) {
+        arr.push(`Relay ${arr.length + 1}`);
+      }
+      setLabels(arr);
+    }
+  }, [initialLabels]);
+
   const handleBrokerChange = (index: number, field: keyof BrokerConfig, value: any) => {
     const updated = [...brokers];
     updated[index] = {
