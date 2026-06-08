@@ -572,16 +572,16 @@ export default function App() {
 
             </div>
 
-            {/* VOICE SPEECH ASSISTED CONTROLLER ROW */}
-            <VoiceController 
-              onCommandSuccess={() => {}} 
-              relayLabels={state.relayLabels} 
-            />
-
             {/* LIVE ACTIVITY LOGGER BLOCK */}
             <ActivityLog 
               logs={state.logs} 
               onClearLogs={handleClearLogs} 
+            />
+
+            {/* VOICE SPEECH ASSISTED CONTROLLER ROW */}
+            <VoiceController 
+              onCommandSuccess={() => {}} 
+              relayLabels={state.relayLabels} 
             />
 
           </div>
