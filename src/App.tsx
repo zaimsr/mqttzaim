@@ -190,9 +190,6 @@ export default function App() {
   };
 
   const triggerSwitchBroker = async (idx: number) => {
-    // If we're already active there, ignore
-    if (state.activeBrokerIndexESP32 === idx) return;
-
     setMutationLoading(`broker-${idx}`);
     try {
       const res = await fetch('/api/switch-broker', {
@@ -386,19 +383,29 @@ export default function App() {
                   <div className="grid grid-cols-3 gap-2">
                     {[0, 1, 2].map((idx) => {
                       const isActive = state.activeBrokerIndexESP32 === idx;
+                      const connState = state.brokerConnectionStates.find(b => b.index === idx);
+                      const isConnected = connState?.connected;
+                      const isConnecting = connState?.connecting;
+                      const statusColor = isConnected 
+                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' 
+                        : isConnecting 
+                          ? 'bg-amber-500 animate-pulse' 
+                          : 'bg-rose-500';
                       return (
                         <button
                           key={idx}
                           id={`shortcut-broker-btn-${idx}`}
                           onClick={() => triggerSwitchBroker(idx)}
                           disabled={mutationLoading !== null}
-                          className={`py-2 rounded font-bold text-xs transition-all duration-200 cursor-pointer ${
+                          className={`py-2 rounded font-bold text-xs transition-all duration-200 cursor-pointer relative ${
                             isActive
                               ? 'bg-[#c7a97c] text-[#0a0a0b] shadow-lg shadow-[#c7a97c]/10'
-                              : 'bg-zinc-805 border border-[#1c1c1e] text-zinc-400 hover:border-[#c7a97c] hover:text-white'
+                              : 'bg-[#161618] border border-[#1c1c1e] text-zinc-400 hover:border-[#c7a97c] hover:text-[#c7a97c]'
                           }`}
+                          title={`Web Proxy ${isConnected ? 'Terhubung' : isConnecting ? 'Menghubungkan' : 'Terputus'}`}
                         >
                           B{idx + 1}
+                          <span className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${statusColor}`} />
                         </button>
                       );
                     })}

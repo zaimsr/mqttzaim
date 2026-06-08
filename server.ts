@@ -190,8 +190,8 @@ function connectToBroker(index: number, cfg: typeof DEFAULT_BROKERS[0]) {
   const url = `${protocol}://${cfg.server}:${cfg.port}`;
 
   let connectionUsername = cfg.user;
-  // If vhost is present, prepend vhost:username
-  if (cfg.vhost && cfg.vhost.trim().length > 0) {
+  // If vhost is present, prepend vhost:username (only for RabbitMQ clusters, NOT for LavinMQ clusters which contain .lmq. in server)
+  if (cfg.vhost && cfg.vhost.trim().length > 0 && !cfg.server.includes(".lmq.")) {
     connectionUsername = `${cfg.vhost}:${cfg.user}`;
   }
 
@@ -199,7 +199,7 @@ function connectToBroker(index: number, cfg: typeof DEFAULT_BROKERS[0]) {
     clientId: cfg.client_id || `WebProxy_${Math.random().toString(36).substring(2, 8)}`,
     rejectUnauthorized: false, // Mirror ESP32 espClient.setInsecure()
     keepalive: 60,
-    reconnectPeriod: 10000, // retry every 10s
+    reconnectPeriod: 10005, // retry every 10s
     connectTimeout: 15000,
   };
 
@@ -232,15 +232,17 @@ function connectToBroker(index: number, cfg: typeof DEFAULT_BROKERS[0]) {
     });
 
     client.on("reconnect", () => {
-      // Reconnection attempt
+      addLog("info", brokerLabel, `Mencoba menghubungkan ulang ke ${cfg.server}:${cfg.port}...`);
     });
 
     client.on("close", () => {
-      // Offline trigger
+      addLog("warning", brokerLabel, `Koneksi ke broker ditutup atau terputus.`);
+      broadcastState();
     });
 
     client.on("offline", () => {
-      // Disconnection detected
+      addLog("warning", brokerLabel, `Broker lari ke mode offline.`);
+      broadcastState();
     });
 
     client.on("error", (err) => {

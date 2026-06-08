@@ -13,6 +13,8 @@ export interface SystemState {
   relayStates: boolean[];
   variasiMode: number;
   activeBrokerIndexESP32: number;
+  relayLabels: string[];
+  brokers: BrokerConfig[];
   brokerConnectionStates: {
     index: number;
     connected: boolean;

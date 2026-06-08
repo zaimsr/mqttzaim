@@ -176,7 +176,7 @@ export default function BrokerConfigForm({ initialBrokers, initialLabels, onSave
                   <div className="relative">
                     <input
                       type={showPasswords[idx] ? 'text' : 'password'}
-                      value={broker.pass}
+                      value={broker.pass || ''}
                       placeholder="••••••••••••"
                       onChange={(e) => handleBrokerChange(idx, 'pass', e.target.value)}
                       className="w-full bg-[#161618] text-[#e2e2e2] pl-3.5 pr-10 py-2 text-xs rounded border border-[#1c1c1e] focus:outline-none focus:border-[#c7a97c] transition-all font-mono"
