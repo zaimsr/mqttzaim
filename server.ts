@@ -228,10 +228,6 @@ function connectToBroker(index: number, cfg: typeof DEFAULT_BROKERS[0]) {
   const url = `${protocol}://${cfg.server}:${cfg.port}`;
 
   let connectionUsername = cfg.user;
-  // Auto-prepend "FlespiToken " for Flespi broker if not already present
-  if (cfg.server && cfg.server.toLowerCase().includes("flespi") && connectionUsername && !connectionUsername.startsWith("FlespiToken ")) {
-    connectionUsername = `FlespiToken ${connectionUsername.trim()}`;
-  }
   // If vhost is present, prepend vhost:username
   if (cfg.vhost && cfg.vhost.trim().length > 0) {
     connectionUsername = `${cfg.vhost}:${connectionUsername}`;
